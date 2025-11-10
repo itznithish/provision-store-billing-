@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Novamind billing software</title>
+    <title>Novamind Inventory and Billing</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -127,7 +127,7 @@
     </style>
 </head>
 <body>
-    <h1>Novamind Billing Software</h1>
+    <h1>Novamind Inventory and Billing</h1>
     <div class="container">
         <div class="tab-buttons">
             <button onclick="showTab('products')">Product Management</button>
@@ -141,6 +141,7 @@
                     <tr>
                         <th>Name</th>
                         <th>Price (per kg)</th>
+                        <th>Stock (kg)</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -152,9 +153,9 @@
         <div id="billing" class="tab">
             <h2>Billing</h2>
             <div class="store-details">
-                <input type="text" id="storeName" placeholder="Provision Store Name" value="add your store name">
-                <input type="text" id="storeAddress" placeholder="Address" value="add your address here">
-                <input type="text" id="storePhone" placeholder="Phone No" value="add your">
+                <input type="text" id="storeName" placeholder="Provision Store Name" value="My Provision Store">
+                <input type="text" id="storeAddress" placeholder="Address" value="123 Main Street, City">
+                <input type="text" id="storePhone" placeholder="Phone No" value="123-456-7890">
                 <input type="text" id="customerName" placeholder="Customer Name (optional)">
             </div>
             <div>
@@ -206,6 +207,7 @@
                 const row = `<tr>
                     <td>${prod.name}</td>
                     <td>${prod.price}</td>
+                    <td>${prod.stock}</td>
                     <td>
                         <button onclick="editProduct(${index})">Edit</button>
                         <button onclick="deleteProduct(${index})">Delete</button>
@@ -219,8 +221,9 @@
         function addProduct() {
             const name = prompt('Product Name:');
             const price = parseFloat(prompt('Price per kg:'));
-            if (name && !isNaN(price)) {
-                products.push({ name, price });
+            const stock = parseFloat(prompt('Stock (kg):'));
+            if (name && !isNaN(price) && !isNaN(stock)) {
+                products.push({ name, price, stock });
                 updateProductTable();
                 updateProductList();
             }
@@ -230,8 +233,9 @@
             const prod = products[index];
             const name = prompt('Product Name:', prod.name);
             const price = parseFloat(prompt('Price per kg:', prod.price));
-            if (name && !isNaN(price)) {
-                products[index] = { name, price };
+            const stock = parseFloat(prompt('Stock (kg):', prod.stock));
+            if (name && !isNaN(price) && !isNaN(stock)) {
+                products[index] = { name, price, stock };
                 updateProductTable();
                 updateProductList();
             }
@@ -257,12 +261,13 @@
             if (!prodName || isNaN(qtyKg) || qtyKg <= 0) return alert('Select product and enter valid quantity');
             const prod = products.find(p => p.name === prodName);
             if (!prod) return alert('Product not found');
+            if (prod.stock < qtyKg) return alert('Insufficient stock');
             const price = prod.price * qtyKg;
             // Format quantity display as kg gms
             const kg = Math.floor(qtyKg);
             const gms = Math.round((qtyKg - kg) * 1000);
             const qtyDisplay = gms > 0 ? `${kg}kg ${gms}gms` : `${kg}kg`;
-            cart.push({ product: prod, qty: qtyDisplay, price: price.toFixed(2) });
+            cart.push({ product: prod, qty: qtyDisplay, qtyKg, price: price.toFixed(2) });
             updateCartTable();
         }
 
@@ -307,6 +312,12 @@
 
         function generateBill() {
             if (cart.length === 0) return alert('Cart is empty');
+            // Deduct stock
+            cart.forEach(item => {
+                const prod = products.find(p => p.name === item.product.name);
+                if (prod) prod.stock -= item.qtyKg;
+            });
+            updateProductTable();
             const storeName = document.getElementById('storeName').value || 'Provision Store';
             const address = document.getElementById('storeAddress').value || 'Address';
             const contact = document.getElementById('storePhone').value || 'Contact';
